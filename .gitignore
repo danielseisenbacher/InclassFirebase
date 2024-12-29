@@ -1,0 +1,12 @@
+# Node.js dependencies
+node_modules/
+
+# Firebase related
+.firebase/
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Log files
+*.log
