@@ -93,4 +93,4 @@ onValue(usersRef, (snapshot) => {
         // Add marker for each user
         L.marker([lat, lon]).addTo(map);}
     }
-});
+);
