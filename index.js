@@ -1,6 +1,6 @@
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
-import { getDatabase, ref, set, remove } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-database.js";
+import { getDatabase, ref, set, remove, onValue } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-database.js";
 
 const firebaseConfig = {
 apiKey: "AIzaSyC0yacHCUnoApDu4valcrxMKC0EZr7jMec",
@@ -82,17 +82,19 @@ onValue(usersRef, (snapshot) => {
                 map.removeLayer(layer);
             }
         });
+    
+    console.log("ABCDEFGHABIGLAJG");
+    
+    // Iterate through all users and add a marker for each one
+    for (const userId in data) {
+        const userData = data[userId];
+        const lat = userData.latitude;
+        const lon = userData.longitude;
 
-        // Iterate through all users and add a marker for each one
-        for (const userId in data) {
-            const userData = data[userId];
-            const lat = userData.latitude;
-            const lon = userData.longitude;
-
-            // Add marker for each user
-            L.marker([lat, lon]).addTo(map)
-                .bindPopup(`User: ${userId}<br>Lat: ${lat}, Lng: ${lon}`)
-                .openPopup();
+        // Add marker for each user
+        L.marker([lat, lon]).addTo(map)
+            .bindPopup(`User: ${userId}<br>Lat: ${lat}, Lng: ${lon}`)
+            .openPopup();
         }
     }
 });
