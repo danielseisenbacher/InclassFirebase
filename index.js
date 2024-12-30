@@ -1,3 +1,19 @@
+window.addEventListener('load', () => {
+    const path = window.location.pathname;
+
+    // Check if the URL is "/admin"
+    if (path === '/admin') {
+        setUserID('admin');
+    } else {
+        setUserID('guest'); // Default UserID
+    }
+});
+
+// Function to set UserID
+function setUserID(userID) {
+    console.log(`UserID set to: ${userID}`);
+}
+
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
 import { getDatabase, ref, set, remove, onValue } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-database.js";
