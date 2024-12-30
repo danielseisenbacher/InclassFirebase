@@ -69,10 +69,6 @@ map.on('click', function(e) {
     const lat = e.latlng.lat.toFixed(5);
     const lng = e.latlng.lng.toFixed(5);
     writeUserData(session_UUID, lat, lng);
-
-    marker = L.marker(e.latlng).addTo(map)
-        .bindPopup(`Marker set at<br>Lat: ${e.latlng.lat.toFixed(5)}, Lng: ${e.latlng.lng.toFixed(5)}`)
-        .openPopup();
 });
 
 // Listen for changes in the Firebase Realtime Database and update the map with markers
