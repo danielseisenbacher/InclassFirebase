@@ -1,20 +1,35 @@
-window.addEventListener('load', () => {
-    const path = window.location.pathname;
+// -----------------------------------------------  USER OR ADMIN? ------------------------------------------------------------------
+// index.js
+// Function to generate a unique user ID (replace with actual logic)
+function generateUserId() {
+    // Example: Generate a random string ID for demonstration purposes
+    return 'user_' + Math.random().toString(36).substring(7);
+}
+// define the unique userID for this session
+let session_UUID;
 
-    // Check if the URL is "/admin"
-    if (path === '/admin') {
-        setUserID('admin');
+window.addEventListener('load', () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const user = urlParams.get('user');
+
+    if (user === 'admin') {
+        session_UUID = "admin";
     } else {
-        setUserID('guest'); // Default UserID
+        session_UUID = generateUserId();
+    }
+    console.log("current UserID: "+session_UUID)
+
+    // Show or hide the button based on the session_UUID
+    const clearButton = document.getElementById('clearButton');
+    if (session_UUID === 'admin') {
+        clearButton.style.display = 'inline-block'; // Show the button
+    } else {
+        clearButton.style.display = 'none'; // Hide the button
     }
 });
 
-// Function to set UserID
-function setUserID(userID) {
-    console.log(`UserID set to: ${userID}`);
-}
 
-
+// -----------------------------------------------  FIREBASE LOGIC ------------------------------------------------------------------
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
 import { getDatabase, ref, set, remove, onValue } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-database.js";
 
@@ -55,38 +70,6 @@ function clear_db() {
 }
 
 
-// -----------------------------------------------  LEAFLET LOGIC ------------------------------------------------------------------
-// Initialize the map
-const map = L.map('map').setView([48.2082, 16.3738], 13); // Centered on Vienna
-
-// Add a "stumme Karte" tile layer
-L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
-    attribution: '© OpenStreetMap contributors, © CartoDB'
-}).addTo(map);
-
-
-// Function to generate a unique user ID (replace with actual logic)
-function generateUserId() {
-    // Example: Generate a random string ID for demonstration purposes
-    return 'user_' + Math.random().toString(36).substring(7);
-}
-// define the unique userID for this session
-let session_UUID = generateUserId();
-
-
-// Add click event to place a marker
-let marker;
-map.on('click', function(e) {
-    if (marker) {
-        map.removeLayer(marker); // Remove existing marker
-    }
-
-    // Pass the actual latitude and longitude to the writeUserData function
-    const lat = e.latlng.lat.toFixed(5);
-    const lng = e.latlng.lng.toFixed(5);
-    writeUserData(session_UUID, lat, lng);
-});
-
 // Listen for changes in the Firebase Realtime Database and update the map with markers
 const usersRef = ref(database, 'users/');
 onValue(usersRef, (snapshot) => {
@@ -106,7 +89,38 @@ onValue(usersRef, (snapshot) => {
         const lat = userData.latitude;
         const lon = userData.longitude;
 
-        // Add marker for each user
-        L.marker([lat, lon]).addTo(map);}
+        // Create the marker
+        const marker = L.marker([lat, lon]);
+        marker.addTo(map);
+
+        // Check if the user is 'admin' and apply the red marker if true
+        if (userId === 'admin') {
+            marker.getElement().classList.add('red-marker');
+        } else {
+            ;
+        }      
     }
-);
+});
+
+// -----------------------------------------------  LEAFLET LOGIC ------------------------------------------------------------------
+// Initialize the map
+const map = L.map('map').setView([48.2082, 16.3738], 13); // Centered on Vienna
+
+// Add a "stumme Karte" tile layer
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
+    attribution: '© OpenStreetMap contributors, © CartoDB'
+}).addTo(map);
+
+
+// Add click event to add into database
+let marker;
+map.on('click', function(e) {
+    if (marker) {
+        map.removeLayer(marker); // Remove existing marker
+    }
+
+    // Pass the actual latitude and longitude to the writeUserData function
+    const lat = e.latlng.lat.toFixed(5);
+    const lng = e.latlng.lng.toFixed(5);
+    writeUserData(session_UUID, lat, lng);
+});
