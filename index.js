@@ -76,13 +76,13 @@ const usersRef = ref(database, 'users/');
 onValue(usersRef, (snapshot) => {
     console.log("change detected in database")
     const data = snapshot.val();
-    if (data) {
-        // Clear the existing markers from the map
-        map.eachLayer((layer) => {
-            if (layer instanceof L.Marker) {
-                map.removeLayer(layer);
-            }
-        });
+
+    // Clear the existing markers from the map
+    map.eachLayer((layer) => {
+        if (layer instanceof L.Marker) {
+            map.removeLayer(layer);
+        }
+    });
     
     // Iterate through all users and add a marker for each one
     for (const userId in data) {
