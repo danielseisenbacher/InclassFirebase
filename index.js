@@ -74,6 +74,7 @@ map.on('click', function(e) {
 // Listen for changes in the Firebase Realtime Database and update the map with markers
 const usersRef = ref(database, 'users/');
 onValue(usersRef, (snapshot) => {
+    console.log("change detected in database")
     const data = snapshot.val();
     if (data) {
         // Clear the existing markers from the map
@@ -83,8 +84,6 @@ onValue(usersRef, (snapshot) => {
             }
         });
     
-    console.log("ABCDEFGHABIGLAJG");
-    
     // Iterate through all users and add a marker for each one
     for (const userId in data) {
         const userData = data[userId];
@@ -92,9 +91,6 @@ onValue(usersRef, (snapshot) => {
         const lon = userData.longitude;
 
         // Add marker for each user
-        L.marker([lat, lon]).addTo(map)
-            .bindPopup(`User: ${userId}<br>Lat: ${lat}, Lng: ${lon}`)
-            .openPopup();
-        }
+        L.marker([lat, lon]).addTo(map);}
     }
 });
