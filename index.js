@@ -196,8 +196,8 @@ onValue(usersRef, (snapshot) => {
 const map = L.map('map').setView([48.2082, 16.3738], 13); // Centered on Vienna
 
 // Add a "stumme Karte" tile layer
-L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
-    attribution: '© OpenStreetMap contributors, © CartoDB'
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
 }).addTo(map);
 
 
