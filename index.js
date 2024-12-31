@@ -29,6 +29,52 @@ window.addEventListener('load', () => {
 });
 
 
+// ----------------------------------------------- POPUP FUNCTIONS ------------------------------------------------------------------
+
+
+function greatcircledistance(lat1, lon1, lat2, lon2) {
+    const toRadians = (degrees) => degrees * (Math.PI / 180); // Convert degrees to radians
+
+    const R = 6371; // Earth's radius in kilometers
+    const dLat = toRadians(lat2 - lat1);
+    const dLon = toRadians(lon2 - lon1);
+    const radLat1 = toRadians(lat1);
+    const radLat2 = toRadians(lat2);
+
+    const a = 
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(radLat1) * Math.cos(radLat2) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return R * c; // Distance in kilometers
+}
+
+
+function calculateStats(distanceArray) {
+    // Sort the array in ascending order
+    console.log(distanceArray)
+    const sortedArray = [...distanceArray].sort((a, b) => a - b);
+    console.log(sortedArray)
+
+    // Calculate median
+    const mid = Math.floor(sortedArray.length / 2);
+    const median = sortedArray.length % 2 === 0 
+        ? (sortedArray[mid - 1] + sortedArray[mid]) / 2
+        : sortedArray[mid];
+
+    // Calculate average
+    const sum = distanceArray.reduce((acc, val) => acc + val, 0);
+    const average = sum / distanceArray.length;
+
+    // Get min and max
+    const min = Math.min(...distanceArray);
+    const max = Math.max(...distanceArray);
+
+    return { median, average, min, max };
+}
+
+
 // -----------------------------------------------  FIREBASE LOGIC ------------------------------------------------------------------
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
 import { getDatabase, ref, set, remove, onValue } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-database.js";
@@ -83,6 +129,9 @@ onValue(usersRef, (snapshot) => {
         }
     });
     
+    let blueMarkers = [];
+    let redMarker = null;
+
     // Iterate through all users and add a marker for each one
     for (const userId in data) {
         const userData = data[userId];
@@ -91,14 +140,54 @@ onValue(usersRef, (snapshot) => {
 
         // Create the marker
         const marker = L.marker([lat, lon]);
-        marker.addTo(map);
-
+        
         // Check if the user is 'admin' and apply the red marker if true
         if (userId === 'admin') {
-            marker.getElement().classList.add('red-marker');
+            // keep track of the red marker and don't put it on the map yet
+            redMarker = marker
+            
         } else {
-            ;
+            // add to the blue marker list to keep track of the distance and put it on the map
+            blueMarkers.push(marker)
+            marker.addTo(map);
         }      
+    }
+
+    if (redMarker) {
+        if (new URLSearchParams(window.location.search).get('user') === 'admin') {
+            // for the ADMIN - show the red Marker and calculate the statistics
+            redMarker.addTo(map)
+            redMarker.getElement().classList.add('red-marker');
+
+            let distanceArray = [];
+
+            // print lat long
+            const redLatLng = redMarker.getLatLng();
+
+            for (const blueMarker of blueMarkers) {
+                let blueLatLng = blueMarker.getLatLng();
+                console.log(redLatLng.lat, redLatLng.lng, blueLatLng.lat, blueLatLng.lng)
+                distanceArray.push(greatcircledistance(redLatLng.lat, redLatLng.lng, blueLatLng.lat, blueLatLng.lng))
+            }
+            
+            // run the calculateStats function
+            const stats = calculateStats(distanceArray)
+        
+            let popupString = `
+            <b>Distance Statistics:</b><br>
+            Average Distance: ${stats.average.toFixed(3)} km<br>
+            Median Distance: ${stats.median.toFixed(3)} km<br>
+            Max Distance: ${stats.max.toFixed(3)} km<br>
+            Min Distance: ${stats.min.toFixed(3)} km
+        `;
+            // Popup that includes information about distance
+            redMarker.bindPopup(popupString).openPopup();
+
+        } else {
+            // for other USERS - only show the red Marker
+            redMarker.addTo(map)
+            redMarker.getElement().classList.add('red-marker');
+        }
     }
 });
 

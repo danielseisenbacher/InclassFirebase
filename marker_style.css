@@ -1,5 +1,4 @@
 /* Red marker for admin */
 .red-marker {
-  filter: hue-rotate(0deg) brightness(1) saturate(5) contrast(1) sepia(1) hue-rotate(-40deg);
+  filter: hue-rotate(135deg) brightness(1) saturate(100);
 }
-
