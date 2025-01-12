@@ -21,10 +21,13 @@ window.addEventListener('load', () => {
 
     // Show or hide the button based on the session_UUID
     const clearButton = document.getElementById('clearButton');
+    const clearAdminButton = document.getElementById('clearAdminButton');
     if (session_UUID === 'admin') {
         clearButton.style.display = 'inline-block'; // Show the button
+        clearAdminButton.style.display = 'inline-block'; // Show the button
     } else {
         clearButton.style.display = 'none'; // Hide the button
+        clearAdminButton.style.display = 'none'; // Hide the button
     }
 });
 
@@ -53,9 +56,7 @@ function greatcircledistance(lat1, lon1, lat2, lon2) {
 
 function calculateStats(distanceArray) {
     // Sort the array in ascending order
-    console.log(distanceArray)
     const sortedArray = [...distanceArray].sort((a, b) => a - b);
-    console.log(sortedArray)
 
     // Calculate median
     const mid = Math.floor(sortedArray.length / 2);
@@ -77,7 +78,7 @@ function calculateStats(distanceArray) {
 
 // -----------------------------------------------  FIREBASE LOGIC ------------------------------------------------------------------
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
-import { getDatabase, ref, set, remove, onValue } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-database.js";
+import { getDatabase, ref, set, get, remove, onValue } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-database.js";
 
 const firebaseConfig = {
 apiKey: "AIzaSyC0yacHCUnoApDu4valcrxMKC0EZr7jMec",
@@ -98,12 +99,42 @@ const database = getDatabase(app);
 
 
 // write data to the db
-function writeUserData(userId, lat, lon) {
-    const reference = ref(database, 'users/' + userId);
-    set(reference, {
-        latitude: lat,
-        longitude: lon
-    });
+async function writeUserData(userId, lat, lon, method_=null) {
+    console.log(userId, lat, lon, method_)
+    let reference
+    if (userId ==='admin'){
+        let isFinished = false;
+        let count = 0;
+
+        while (!isFinished) {
+            reference = ref(database, 'users/' + userId + '/'+ count);
+            // Check if the reference already exists
+            const snapshot = await get(reference);
+
+            if (!snapshot.exists()) {
+                isFinished = true;
+            }
+
+            count++;
+        }
+    }
+    else {
+        reference = ref(database, 'users/' + userId);
+    }
+    if (method_) {
+        set(reference, {
+            latitude: lat,
+            longitude: lon,
+            method: method_
+        });
+    }
+    else {
+        set(reference, {
+            latitude: lat,
+            longitude: lon,
+            method: 'MANUALLY CLICKED'
+        });
+    }    
 }
 
 
@@ -112,6 +143,14 @@ document.getElementById('clearButton').addEventListener('click', clear_db);
 
 function clear_db() {
     const reference = ref(database, 'users/');
+    remove(reference);
+}
+
+// remove all data from the db when clicking the clear button
+document.getElementById('clearAdminButton').addEventListener('click', clearAdmin_db);
+
+function clearAdmin_db() {
+    const reference = ref(database, 'users/admin');
     remove(reference);
 }
 
@@ -130,63 +169,78 @@ onValue(usersRef, (snapshot) => {
     });
     
     let blueMarkers = [];
-    let redMarker = null;
+    let redMarkers = [];
 
     // Iterate through all users and add a marker for each one
-    for (const userId in data) {
-        const userData = data[userId];
-        const lat = userData.latitude;
-        const lon = userData.longitude;
-
-        // Create the marker
-        const marker = L.marker([lat, lon]);
-        
+    for (const userId in data) {     
         // Check if the user is 'admin' and apply the red marker if true
         if (userId === 'admin') {
-            // keep track of the red marker and don't put it on the map yet
-            redMarker = marker
-            
+            const userData = data[userId];
+            console.log(userData)
+
+            userData.forEach((item) => {
+                const lat = item.latitude;
+                const lon = item.longitude;
+                const method = item.method;
+
+                // keep track of the red marker and don't put it on the map yet
+                const marker = [L.marker([lat, lon]), method];
+                redMarkers.push(marker)
+            });
+
         } else {
+            const userData = data[userId];
+            const lat = userData.latitude;
+            const lon = userData.longitude;
+
+            // Create the marker
+            const marker = L.marker([lat, lon]);
             // add to the blue marker list to keep track of the distance and put it on the map
             blueMarkers.push(marker)
             marker.addTo(map);
         }      
     }
 
-    if (redMarker) {
+    if (redMarkers != []) {
         if (new URLSearchParams(window.location.search).get('user') === 'admin') {
-            // for the ADMIN - show the red Marker and calculate the statistics
-            redMarker.addTo(map)
-            redMarker.getElement().classList.add('red-marker');
+            redMarkers.forEach((item) => {
+                // for the ADMIN - show the red Marker and calculate the statistics
+                item[0].addTo(map)
+                item[0].getElement().classList.add('red-marker');
+                
+                let distanceArray = [];
 
-            let distanceArray = [];
+                // print lat long
+                const redLatLng = item[0].getLatLng();
 
-            // print lat long
-            const redLatLng = redMarker.getLatLng();
-
-            for (const blueMarker of blueMarkers) {
-                let blueLatLng = blueMarker.getLatLng();
-                console.log(redLatLng.lat, redLatLng.lng, blueLatLng.lat, blueLatLng.lng)
-                distanceArray.push(greatcircledistance(redLatLng.lat, redLatLng.lng, blueLatLng.lat, blueLatLng.lng))
-            }
+                for (const blueMarker of blueMarkers) {
+                    let blueLatLng = blueMarker.getLatLng();
+                    distanceArray.push(greatcircledistance(redLatLng.lat, redLatLng.lng, blueLatLng.lat, blueLatLng.lng))
+                }
+                
+                // run the calculateStats function
+                const stats = calculateStats(distanceArray)
             
-            // run the calculateStats function
-            const stats = calculateStats(distanceArray)
-        
-            let popupString = `
-            <b>Distance Statistics:</b><br>
-            Average Distance: ${stats.average.toFixed(3)} km<br>
-            Median Distance: ${stats.median.toFixed(3)} km<br>
-            Max Distance: ${stats.max.toFixed(3)} km<br>
-            Min Distance: ${stats.min.toFixed(3)} km
-        `;
-            // Popup that includes information about distance
-            redMarker.bindPopup(popupString).openPopup();
+                let popupString = `
+                <b>${item[1]} Statistics:</b><br>
+                Average Distance: ${stats.average.toFixed(3)} km<br>
+                Median Distance: ${stats.median.toFixed(3)} km<br>
+                Max Distance: ${stats.max.toFixed(3)} km<br>
+                Min Distance: ${stats.min.toFixed(3)} km
+            `;
+                // Popup that includes information about distance
+                item[0].bindPopup(popupString);
+
+            });
+
+
 
         } else {
-            // for other USERS - only show the red Marker
-            redMarker.addTo(map)
-            redMarker.getElement().classList.add('red-marker');
+            redMarkers.forEach((item) => {
+                // for other USERS - only show the red Marker
+                item.addTo(map)
+                item.getElement().classList.add('red-marker');
+            });
         }
     }
 });
@@ -202,14 +256,67 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 
 
 // Add click event to add into database
-let marker;
 map.on('click', function(e) {
-    if (marker) {
-        map.removeLayer(marker); // Remove existing marker
-    }
-
     // Pass the actual latitude and longitude to the writeUserData function
     const lat = e.latlng.lat.toFixed(5);
     const lng = e.latlng.lng.toFixed(5);
     writeUserData(session_UUID, lat, lng);
 });
+
+
+
+// ----------------------------------------------------- Dropzone -----------------------------------------------------------------
+// only available for admins
+
+function delay(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+if (new URLSearchParams(window.location.search).get('user') === 'admin') {
+    // Prevent the default behavior (opening the file in the browser) when dragging over
+    document.body.addEventListener('dragover', (event) => {
+        event.preventDefault();
+    });
+
+    // Handle the drop event
+    document.body.addEventListener('drop', (event) => {
+        event.preventDefault();  // Prevent default behavior (file open in a new tab)
+
+        // Access the dropped file
+        const file = event.dataTransfer.files[0];
+        if (file && file.type === 'application/json') {
+            const reader = new FileReader();
+
+            reader.onload = async (e) => {
+                try {
+                    const jsonData = JSON.parse(e.target.result);
+                    try {
+                        // Iterate through the features and access the "method"
+                        for (const feature in jsonData) {
+                            console.log(feature);
+                            if (jsonData.hasOwnProperty(feature)) {
+                                let lat = jsonData[feature].latitude;
+                                let lng = jsonData[feature].longitude;
+                                lat = lat.toFixed(5);
+                                lng = lng.toFixed(5);
+                                const method = jsonData[feature].method;
+
+                                // Call writeUserData and add a delay
+                                await writeUserData('admin', lat, lng, method);
+                                await delay(500); // 50ms delay between each call
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Invalid JSON keys:', error);
+                    }
+                } catch (error) {
+                    console.error('Invalid JSON file:', error);
+                }
+            };
+            reader.readAsText(file);
+        } else {
+            alert('Please drop a valid JSON file.');
+        }
+    });
+}
+

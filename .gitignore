@@ -4,6 +4,9 @@ node_modules/
 # Firebase related
 .firebase/
 
+# IDE related
+.idea/
+
 # System files
 .DS_Store
 Thumbs.db
